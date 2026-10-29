@@ -1,0 +1,32 @@
+{
+  "name": "opifex",
+  "private": true,
+  "license": "AGPL-3.0-only",
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc --project tsconfig.json --noEmit",
+    "effect:diagnostics": "effect-tsgo diagnostics --project tsconfig.json",
+    "lint": "oxlint --type-aware --deny-warnings .",
+    "format": "oxfmt package.json tsconfig.json .oxlintrc.json src test/*.ts",
+    "format:check": "oxfmt --check package.json tsconfig.json .oxlintrc.json src test/*.ts",
+    "test": "bun test",
+    "check": "bun run typecheck && bun run effect:diagnostics && bun run lint && bun run format:check && bun run test && bun run build",
+    "build": "bun run src/build.ts",
+    "refresh": "bun run src/refresh.ts",
+    "check-live": "bun run src/refresh.ts --check",
+    "dev": "bun run build && bun run src/server.ts"
+  },
+  "dependencies": {
+    "@effect/platform-bun": "4.0.7",
+    "effect": "4.0.7"
+  },
+  "devDependencies": {
+    "@effect/tsgo": "0.63.0",
+    "@types/bun": "1.4.4",
+    "oxfmt": "0.75.0",
+    "oxlint": "1.90.0",
+    "oxlint-tsgolint": "7.0.2005",
+    "typescript": "7.0.2"
+  },
+  "packageManager": "bun@1.4.4"
+}

@@ -1,0 +1,20 @@
+name: Check
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: oven-sh/setup-bun@v2
+      - run: bun install --frozen-lockfile
+      # Build from the recorded snapshot so the check does not depend on AA being reachable.
+      - run: mkdir -p data && cp test/fixtures/aa-snapshot-2026-10-28.json data/
+      - run: bun run check

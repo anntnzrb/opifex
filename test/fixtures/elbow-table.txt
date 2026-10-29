@@ -1,0 +1,36 @@
+| Creator | Model | Configurations (non-dominated / all) | Opifex Score elbow (2σ) | Coding bucket elbow (2σ) | Proven gains, Opifex Score (2σ) | Note |
+| --- | --- | --- | --- | --- | --- | --- |
+| Alibaba | Qwen3.8 27B | 1/1 | xhigh (4.6 ± 1.5, $4.51) | xhigh (11.2 ± 2.2, $4.51) | xhigh | only one configuration in the data |
+| Alibaba | Qwen3.8 Max (0902) | 1/1 | default (22.4 ± 2.2, $11.50) | default (29.6 ± 3.3, $11.50) | default | only one configuration in the data |
+| Anthropic | Claude Fable 5.1 | 4/5 | not proven (drop 13.3 ± 42.8); region: medium (35.7 ± 2.2, $6.52), high (39.3 ± 2.2, $9.12) | not proven (drop 22.3 ± 65.5); region: medium (35.2 ± 3.4, $6.52), high (39.0 ± 3.4, $9.12) | low → high (+8.0, ×1.81) |  |
+| Anthropic | Claude Haiku 5.5 | 5/5 | not proven (drop 5.8 ± 26.7); possible elbow: xhigh (21.5 ± 2.2, $0.34) | not proven (drop 14.8 ± 40.5); possible elbow: xhigh (29.7 ± 3.3, $0.34) | low → high (+9.1, ×3.07) → max (+9.8, ×2.48) |  |
+| Anthropic | Claude Opus 5.5 | 5/5 | not proven (drop 11.6 ± 31.5); region: medium (40.4 ± 2.3, $2.64), high (43.5 ± 2.3, $3.54), xhigh (47.5 ± 2.3, $7.41) | not proven (drop 29.2 ± 47.4); region: medium (40.9 ± 3.5, $2.64), high (44.2 ± 3.5, $3.54), xhigh (50.1 ± 3.5, $7.41) | low → medium (+12.0, ×2.19) → xhigh (+7.0, ×2.80) |  |
+| Anthropic | Claude Sonnet 5.5 | 5/5 | not proven (drop 28.0 ± 18.2); possible elbow: high (27.7 ± 2.2, $1.33) | not proven (drop 46.9 ± 27.6); region: high (33.0 ± 3.3, $1.33), xhigh (44.2 ± 3.5, $4.06) | low → high (+12.2, ×2.01) → xhigh (+7.7, ×3.05) → max (+7.6, ×2.95) |  |
+| DeepSeek | DeepSeek V4 Pro 0813 | 1/1 | max (7.6 ± 1.8, $2.60) | max (15.9 ± 2.6, $2.60) | max | only one configuration in the data |
+| DeepSeek | DeepSeek V4.1 Flash 1017 | 1/1 | max (19.5 ± 2.2, $0.66) | max (30.6 ± 3.3, $0.66) | max | only one configuration in the data |
+| Google | Gemini 3.5 Flash-Lite | 1/1 | default (5.1 ± 1.1, $1.91) | default (4.0 ± 1.3, $1.91) | default | only one configuration in the data |
+| Google | Gemini 3.8 Flash | 2/3 | medium (20.0 ± 1.8, $12.64), high (20.7 ± 1.9, $16.20) | medium (17.8 ± 2.8, $12.64), high (19.1 ± 2.8, $16.20) | medium | only 2 non-dominated configurations: no elbow to detect |
+| Google | Gemini 4 Argon | 1/1 | high (41.2 ± 2.2, $6.31) | high (38.3 ± 3.3, $6.31) | high | only one configuration in the data |
+| InclusionAI | Ling 3.1 Flash 1019 | 1/1 | default (14.5 ± 2.0, $4.05) | default (23.3 ± 3.0, $4.05) | default | only one configuration in the data |
+| Kimi | Kimi K3.1 Pro | 1/1 | default (37.5 ± 2.1, $3.53) | default (42.1 ± 3.2, $3.53) | default | only one configuration in the data |
+| Meta | Muse Glimmer | 1/1 | high (-11.4 ± 0.8, $0.38) | high (1.1 ± 0.7, $0.38) | high | only one configuration in the data |
+| Meta | Muse Spark 1.3 | 1/1 | max (25.4 ± 2.1, $3.98) | max (27.2 ± 3.2, $3.98) | max | only one configuration in the data |
+| Meta | Muse Spark Open | 1/1 | xhigh (14.5 ± 1.4, $3.67) | xhigh (7.8 ± 1.9, $3.67) | xhigh | only one configuration in the data |
+| Meta | Muse Wonder | 1/1 | max (32.9 ± 2.2, $7.91) | max (37.5 ± 3.4, $7.91) | max | only one configuration in the data |
+| MiniMax | MiniMax-M3 | 1/1 | default (6.7 ± 1.6, $1.99) | default (13.9 ± 2.3, $1.99) | default | only one configuration in the data |
+| MiniMax | MiniMax-M3.1-Flash | 1/1 | default (11.8 ± 2.0, $0.65) | default (22.8 ± 3.0, $0.65) | default | only one configuration in the data |
+| Mistral | Mistral Large 4 Preview | 1/1 | default (9.0 ± 1.9, $9.57) | default (18.9 ± 2.8, $9.57) | default | only one configuration in the data |
+| NVIDIA | Nemotron 3 Ultra 550B A55B | 1/1 | default (1.8 ± 0.8, $3.59) | default (0.9 ± 0.6, $3.59) | default | only one configuration in the data |
+| NVIDIA | Nemotron 3.5 Super VL | 1/1 | default (1.2 ± 1.0, $1.16) | default (3.7 ± 1.3, $1.16) | default | only one configuration in the data |
+| OpenAI | GPT-6 Astra | 4/5 | not proven (drop 54.8 ± 87.6); possible elbow: high (45.3 ± 2.3, $3.88) | not proven (drop 44.4 ± 135.1); region: high (45.7 ± 3.5, $3.88), xhigh (48.7 ± 3.5, $4.77) | low → high (+9.8, ×2.28) |  |
+| OpenAI | GPT-6 Luna | 5/6 | top level: max (9.5 ± 1.9, $0.20) | top level: max (20.2 ± 2.8, $0.20) | low → medium (+6.3, ×9.17) → max (+9.2, ×3.32) | no real elbow: the curve keeps getting steeper up to the top level |
+| OpenAI | GPT-6.1 Sol | 5/5 | not proven (drop 24.1 ± 28.4); region: medium (39.6 ± 2.3, $0.49), xhigh (43.8 ± 2.3, $0.83) | not proven (drop 36.7 ± 43.6); region: medium (39.2 ± 3.5, $0.49), xhigh (44.7 ± 3.5, $0.83) | low → medium (+10.1, ×1.80) |  |
+| OpenAI | GPT-6.1 Terra | 5/6 | not proven (drop 12.7 ± 31.2); region: medium (31.0 ± 2.2, $0.26), high (34.9 ± 2.3, $0.41) | not proven (drop 20.8 ± 47.9); region: medium (33.7 ± 3.4, $0.26), high (39.2 ± 3.5, $0.41) | low → medium (+9.4, ×2.48) → max (+9.8, ×5.17) |  |
+| Reflection | Beam 1.0 | 1/1 | default (3.7 ± 1.1, $0.43) | default (4.5 ± 1.5, $0.43) | default | only one configuration in the data |
+| SpaceXAI | Grok 4.7 | 3/3 | not proven (drop 9.0 ± 27.2); possible elbow: high (27.9 ± 2.1, $9.69) | not proven (drop 15.0 ± 41.3); possible elbow: high (26.6 ± 3.2, $9.69) | low → xhigh (+6.4, ×2.88) |  |
+| StepFun | Step 5 Preview | 1/1 | default (19.0 ± 1.9, $3.34) | default (20.5 ± 2.9, $3.34) | default | only one configuration in the data |
+| Thinking Machines | Inkling | 1/1 | xhigh (1.2 ± 1.0, $3.00) | xhigh (2.8 ± 1.1, $3.00) | xhigh | only one configuration in the data |
+| Thinking Machines | Inkling Small | 1/1 | default (-1.5 ± 1.0, $0.42) | default (3.3 ± 1.2, $0.42) | default | only one configuration in the data |
+| Xiaomi | MiMo-V2.6-Flash | 1/1 | default (9.7 ± 2.0, $0.16) | default (22.1 ± 3.0, $0.16) | default | only one configuration in the data |
+| Xiaomi | MiMo-V2.6-Pro | 1/1 | default (16.0 ± 2.1, $0.33) | default (28.3 ± 3.2, $0.33) | default | only one configuration in the data |
+| Z AI | GLM-5.3 | 2/2 | low (9.3 ± 1.9, $3.47), max (20.8 ± 2.1, $6.88) | low (21.6 ± 2.9, $3.47), max (29.7 ± 3.2, $6.88) | low → max (+11.5, ×1.99) | only 2 non-dominated configurations: no elbow to detect |

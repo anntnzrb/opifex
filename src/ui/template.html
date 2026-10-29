@@ -1,0 +1,829 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Opifex: Score vs. Cost per Task</title>
+    <style>
+      :root {
+        --fg: #171717;
+        --mut: #737373;
+        --faint: #a3a3a3;
+        --grid: #ececec;
+        --axis: #c9c9c9;
+        --line: #e5e5e5;
+        --card: #fff;
+        --bg: #f5f5f4;
+        --hover: #f5f5f5;
+        --accent: #171717;
+        --rad: 14px;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--fg);
+        font:
+          14px/1.45 ui-sans-serif,
+          system-ui,
+          -apple-system,
+          "Segoe UI",
+          Roboto,
+          sans-serif;
+      }
+      .wrap {
+        max-width: 1180px;
+        margin: 0 auto;
+        padding: 28px 24px;
+        display: flex;
+        flex-direction: column;
+        gap: 18px;
+      }
+      .card {
+        background: var(--card);
+        border: 1px solid var(--line);
+        border-radius: var(--rad);
+        padding: 24px 28px;
+      }
+      .head {
+        display: flex;
+        justify-content: space-between;
+        gap: 16px;
+        align-items: flex-start;
+        flex-wrap: wrap;
+      }
+      .head > div:first-child {
+        flex: 1;
+        min-width: 0;
+      }
+      .picker {
+        flex: none;
+      }
+      h1,
+      h2 {
+        font:
+          600 23px/1.25 Georgia,
+          "Times New Roman",
+          serif;
+        margin: 0;
+        letter-spacing: -0.2px;
+      }
+      h2 {
+        font-size: 20px;
+      }
+      .sub {
+        color: var(--mut);
+        margin: 4px 0 0;
+        font-size: 13px;
+      }
+      .picker {
+        position: relative;
+      }
+      .pbtn {
+        display: flex;
+        align-items: center;
+        gap: 28px;
+        min-width: 260px;
+        justify-content: space-between;
+        background: #f4f4f4;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        padding: 10px 14px;
+        font: 500 14px/1 inherit;
+        color: var(--fg);
+        cursor: pointer;
+      }
+      .pbtn:hover {
+        background: #eee;
+      }
+      .pop {
+        position: absolute;
+        right: 0;
+        top: calc(100% + 6px);
+        width: 430px;
+        max-height: 560px;
+        display: none;
+        flex-direction: column;
+        background: #fff;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        box-shadow: 0 12px 40px #0002;
+        z-index: 20;
+      }
+      .pop.open {
+        display: flex;
+      }
+      .ptop {
+        padding: 12px;
+        border-bottom: 1px solid var(--line);
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+      .search {
+        width: 100%;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 8px 10px;
+        font: inherit;
+      }
+      .row {
+        display: flex;
+        gap: 6px;
+        flex-wrap: wrap;
+        align-items: center;
+      }
+      .lbl {
+        font-size: 12px;
+        color: var(--mut);
+        margin-right: 2px;
+      }
+      .btn {
+        border: 1px solid var(--line);
+        background: #fff;
+        border-radius: 7px;
+        padding: 4px 10px;
+        font: 500 12px/1.4 inherit;
+        cursor: pointer;
+        color: var(--fg);
+      }
+      .btn:hover {
+        background: var(--hover);
+      }
+      .refresh-row {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 10px;
+      }
+      .refresh-row .btn {
+        min-height: 44px;
+        padding: 8px 14px;
+        font-size: 14px;
+      }
+      #refresh-status {
+        color: var(--mut);
+        font-size: 13px;
+      }
+      .chip {
+        border: 1px solid var(--line);
+        background: #fff;
+        border-radius: 999px;
+        padding: 2px 9px;
+        font: 500 12px/1.5 inherit;
+        cursor: pointer;
+        color: var(--faint);
+      }
+      .chip.on {
+        background: var(--accent);
+        border-color: var(--accent);
+        color: #fff;
+      }
+      .chip.part {
+        background: #e5e5e5;
+        color: var(--fg);
+      }
+      .plist {
+        overflow: auto;
+        padding: 4px 0 8px;
+      }
+      .cr {
+        font: 600 11px/1 inherit;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        color: var(--mut);
+        padding: 12px 14px 6px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .grp {
+        padding: 6px 14px;
+        border-radius: 8px;
+        margin: 0 6px;
+      }
+      .grp:hover {
+        background: var(--hover);
+      }
+      .gl {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        cursor: pointer;
+        font-weight: 500;
+      }
+      .gl .cnt {
+        margin-left: auto;
+        color: var(--faint);
+        font-size: 12px;
+        font-weight: 400;
+      }
+      .gchips {
+        display: flex;
+        gap: 5px;
+        flex-wrap: wrap;
+        margin: 5px 0 0 26px;
+      }
+      .dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        display: inline-block;
+        flex: none;
+      }
+      input[type="checkbox"] {
+        accent-color: var(--accent);
+        width: 15px;
+        height: 15px;
+        margin: 0;
+      }
+      .ctl {
+        display: flex;
+        gap: 10px 20px;
+        align-items: center;
+        flex-wrap: wrap;
+        margin: 16px 0 0;
+        color: var(--mut);
+        font-size: 13px;
+      }
+      .ctl label {
+        display: flex;
+        gap: 6px;
+        align-items: center;
+        cursor: pointer;
+        white-space: nowrap;
+      }
+      select,
+      input[type="number"] {
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        padding: 3px 6px;
+        font: inherit;
+        color: var(--fg);
+        background: #fff;
+      }
+      input[type="number"] {
+        width: 60px;
+      }
+      .seg {
+        display: inline-flex;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        overflow: hidden;
+      }
+      .seg button {
+        border: 0;
+        background: #fff;
+        padding: 5px 11px;
+        font: 500 13px/1.3 inherit;
+        color: var(--mut);
+        cursor: pointer;
+      }
+      .seg button + button {
+        border-left: 1px solid var(--line);
+      }
+      .seg button.on {
+        background: var(--accent);
+        color: #fff;
+      }
+      .k {
+        color: var(--fg);
+        font-weight: 600;
+        font-variant-numeric: tabular-nums;
+      }
+      .legend {
+        display: flex;
+        gap: 6px 16px;
+        flex-wrap: wrap;
+        margin: 14px 0 4px;
+        font-size: 14px;
+      }
+      .legend span {
+        display: flex;
+        gap: 7px;
+        align-items: center;
+      }
+      .qsw {
+        width: 22px;
+        height: 13px;
+        border-radius: 2px;
+        background: rgba(144, 238, 144, 0.35);
+        border: 1px solid rgba(110, 200, 110, 0.45);
+        display: inline-block;
+      }
+      .plot {
+        position: relative;
+        margin-top: 6px;
+      }
+      svg text {
+        fill: var(--mut);
+        font-size: 11.5px;
+      }
+      .tip {
+        position: absolute;
+        pointer-events: none;
+        background: #fff;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        padding: 10px 12px;
+        font-size: 12.5px;
+        display: none;
+        width: 270px;
+        box-shadow: 0 8px 24px #0002;
+        z-index: 5;
+      }
+      .tip .t {
+        font-weight: 600;
+        margin-bottom: 6px;
+      }
+      .tip .g {
+        display: grid;
+        grid-template-columns: auto 1fr;
+        gap: 2px 12px;
+      }
+      .tip .g span:nth-child(odd) {
+        color: var(--mut);
+      }
+      .tip .g span:nth-child(even) {
+        text-align: right;
+        font-variant-numeric: tabular-nums;
+      }
+      .tip .bar {
+        display: flex;
+        height: 7px;
+        border-radius: 4px;
+        overflow: hidden;
+        margin: 7px 0 3px;
+        background: #eee;
+      }
+      .tip .why {
+        margin-top: 6px;
+        color: #b45309;
+      }
+      .tip .m {
+        color: var(--mut);
+        font-size: 11.5px;
+      }
+      .foot {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        flex-wrap: wrap;
+        color: var(--mut);
+        font-size: 13px;
+        margin-top: 6px;
+      }
+      .foot a {
+        color: inherit;
+      }
+      .note {
+        color: var(--mut);
+        font-size: 12px;
+        line-height: 1.55;
+        margin: 0 2px;
+      }
+      details {
+        margin-top: 14px;
+        border-top: 1px solid var(--line);
+        padding-top: 10px;
+        color: var(--mut);
+      }
+      summary {
+        cursor: pointer;
+      }
+      table {
+        border-collapse: collapse;
+        width: 100%;
+        font-size: 13px;
+        margin-top: 10px;
+        color: var(--fg);
+      }
+      th,
+      td {
+        text-align: left;
+        padding: 6px 8px;
+        border-bottom: 1px solid var(--line);
+        white-space: nowrap;
+      }
+      th {
+        font-weight: 600;
+        color: var(--mut);
+        font-size: 12px;
+      }
+      th.s {
+        cursor: pointer;
+        user-select: none;
+      }
+      th.s:hover {
+        color: var(--fg);
+      }
+      th.sorted {
+        color: var(--fg);
+      }
+      td.n,
+      th.n {
+        text-align: right;
+        font-variant-numeric: tabular-nums;
+      }
+      tr.cut td {
+        color: var(--faint);
+      }
+      .pf {
+        font-size: 11px;
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        padding: 0 6px;
+        margin-left: 6px;
+        color: var(--mut);
+      }
+      .budget {
+        display: flex;
+        gap: 10px 22px;
+        flex-wrap: wrap;
+        align-items: center;
+        margin-top: 12px;
+        color: var(--mut);
+        font-size: 13px;
+      }
+      .budget label {
+        display: flex;
+        gap: 6px;
+        align-items: center;
+      }
+      .tscroll {
+        overflow-x: auto;
+      }
+      .cellbar {
+        display: inline-block;
+        height: 6px;
+        border-radius: 3px;
+        background: #d4d4d4;
+        vertical-align: middle;
+        margin-left: 8px;
+      }
+      .roigrid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(520px, 1fr));
+        gap: 14px;
+        margin-top: 14px;
+      }
+      .fam {
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        padding: 14px 16px;
+      }
+      .fam h3 {
+        margin: 0;
+        font-size: 15px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .fam .ss {
+        color: var(--mut);
+        font-size: 13px;
+        margin: 3px 0 0;
+      }
+      .fam .ss b {
+        color: var(--fg);
+      }
+      .fam table {
+        margin-top: 8px;
+        font-size: 12.5px;
+      }
+      .fam td,
+      .fam th {
+        padding: 5px 6px;
+      }
+      .ok {
+        color: #15803d;
+        font-weight: 600;
+      }
+      .bad {
+        color: #b91c1c;
+        font-weight: 600;
+      }
+      .sweet {
+        font: 600 11px/1.6 inherit;
+        background: #171717;
+        color: #fff;
+        border-radius: 999px;
+        padding: 0 8px;
+        margin-left: 6px;
+      }
+      tr.sw td {
+        background: #f6f6f5;
+      }
+      tr.dom td {
+        color: var(--faint);
+      }
+      .collapse > summary {
+        list-style: none;
+        cursor: pointer;
+      }
+      .collapse > summary::-webkit-details-marker {
+        display: none;
+      }
+      .collapse > summary h2:after {
+        content: " ▸";
+        color: var(--faint);
+        font-size: 16px;
+      }
+      .collapse[open] > summary h2:after {
+        content: " ▾";
+      }
+      .info {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 17px;
+        height: 17px;
+        border-radius: 50%;
+        border: 1px solid var(--line);
+        color: var(--mut);
+        font: 600 11px/1 inherit;
+        cursor: help;
+        vertical-align: middle;
+        margin-left: 6px;
+      }
+      .disp {
+        position: relative;
+        align-self: center;
+      }
+      .disp > summary {
+        list-style: none;
+        cursor: pointer;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 5px 11px;
+        font: 500 13px/1.3 inherit;
+        color: var(--fg);
+        background: #fff;
+      }
+      .disp > summary::-webkit-details-marker {
+        display: none;
+      }
+      .disp[open] > summary {
+        background: var(--hover);
+      }
+      .disp .dpanel {
+        position: absolute;
+        left: 0;
+        top: calc(100% + 6px);
+        background: #fff;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        box-shadow: 0 12px 40px #0002;
+        padding: 14px 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        z-index: 15;
+        min-width: 300px;
+      }
+      .badge {
+        font: 600 11px/1.6 inherit;
+        border-radius: 999px;
+        padding: 1px 8px;
+        margin-left: 6px;
+        cursor: help;
+        white-space: nowrap;
+      }
+      .b-ok {
+        background: #171717;
+        color: #fff;
+      }
+      .b-no {
+        background: #ececec;
+        color: #525252;
+      }
+      h3.sec {
+        margin: 20px 0 8px;
+        font-size: 15px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <div class="card">
+        <div class="head">
+          <div>
+            <h1>
+              <span id="title">Opifex: Score vs. Cost per Task</span
+              ><span class="info" id="yinfo">i</span>
+            </h1>
+            <p class="sub" id="subtitle"></p>
+            <div class="refresh-row">
+              <button class="btn" id="refresh" type="button" hidden>Refresh data</button>
+              <span id="refresh-status" role="status" aria-live="polite"></span>
+            </div>
+          </div>
+          <div class="picker">
+            <button class="pbtn" id="pbtn" aria-haspopup="true" aria-expanded="false">
+              <span id="plabel"></span
+              ><svg
+                width="12"
+                height="16"
+                viewBox="0 0 12 16"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.6"
+              >
+                <path d="M2 6l4-4 4 4M2 10l4 4 4-4" />
+              </svg>
+            </button>
+            <div class="pop" id="pop" role="dialog" aria-label="Select models">
+              <div class="ptop">
+                <input class="search" id="q" placeholder="Search models or creators…" />
+                <div class="row">
+                  <button class="btn" id="all">Select all</button
+                  ><button class="btn" id="none">Clear</button
+                  ><button class="btn" id="frontier">Frontier labs only</button
+                  ><button class="btn" id="openw">Open weights only</button>
+                </div>
+                <div class="row">
+                  <span class="lbl">Reasoning</span><span id="effchips" class="row"></span>
+                </div>
+              </div>
+              <div class="plist" id="plist"></div>
+            </div>
+          </div>
+        </div>
+        <div class="ctl">
+          <label
+            >Y
+            <span class="seg" id="yseg"
+              ><button data-y="das" class="on">Opifex Score</button
+              ><button data-y="coding">Coding bucket</button
+              ><button data-y="fc">FrontierCode</button
+              ><button data-y="tb">Terminal-Bench</button></span
+            ></label
+          >
+          <label
+            >X
+            <span class="seg" id="xseg"
+              ><button data-m="cost" class="on">Cost / task</button
+              ><button data-m="tok">Tokens / task</button></span
+            ></label
+          >
+          <label
+            >Min score
+            <select id="mode">
+              <option value="rel" selected>% of top</option>
+              <option value="abs">absolute</option>
+            </select>
+            <input type="range" id="minS" min="0" max="100" step="1" value="0" /><input
+              type="number"
+              id="minN"
+              min="0"
+              max="100"
+              step="1"
+              value="0" />
+            <span class="k" id="floorV"></span
+          ></label>
+          <label><input type="checkbox" id="dom" /> Hide dominated</label>
+          <details class="disp">
+            <summary>Display ▾</summary>
+            <div class="dpanel">
+              <label
+                >Cost &amp; tokens on
+                <span class="seg" id="bseg"
+                  ><button data-b="y" class="on">Same tasks as Y</button
+                  ><button data-b="idx">Full index</button></span
+                ></label
+              >
+              <label
+                >Noise threshold
+                <select id="z">
+                  <option value="1">1σ</option>
+                  <option value="2" selected>2σ</option>
+                </select></label
+              >
+              <label><input type="checkbox" id="ghost" checked /> Show filtered-out</label>
+              <label><input type="checkbox" id="eff" checked /> Effort lines</label>
+              <label><input type="checkbox" id="par" checked /> Pareto line</label>
+              <label><input type="checkbox" id="lab" checked /> Labels</label>
+              <label><input type="checkbox" id="quad" /> AA quadrant</label>
+            </div>
+          </details>
+        </div>
+        <div class="legend" id="legend"></div>
+        <div class="plot">
+          <svg
+            id="chart"
+            width="100%"
+            viewBox="0 0 1110 600"
+            role="img"
+            aria-label="Benchmark score scatter"
+          ></svg>
+          <div class="tip" id="tip"></div>
+        </div>
+        <div class="foot">
+          <span id="stat"></span
+          ><span
+            >Data from <a href="https://artificialanalysis.ai/">Artificial Analysis</a> · snapshot
+            <span id="snapshot-date">__DATE__</span></span
+          >
+        </div>
+        <h3 class="sec">Configurations</h3>
+        <div class="tscroll"><table id="tbl"></table></div>
+      </div>
+
+      <div class="card">
+        <h2>
+          Elbow<span
+            class="info"
+            title="Slope = points gained per 10× more cost (or tokens) between consecutive frontier configurations; on the log chart it is the steepness of the line. The elbow is the configuration before the largest drop in slope, with no steeper step after it. It is proven when that drop exceeds the noise threshold and no other candidate is statistically tied; otherwise the tool shows the elbow region and does not pick."
+            >i</span
+          >
+        </h2>
+        <h3 class="sec">Across the selection</h3>
+        <div id="elbowAll"></div>
+        <h3 class="sec">By model</h3>
+        <div class="roigrid" id="elbows"></div>
+      </div>
+      <details class="card collapse" id="ranking">
+        <summary>
+          <h2 style="display: inline">Efficiency ranking &amp; monthly budget (API-equivalent)</h2>
+        </summary>
+        <p class="sub">Configurations shown on the chart. API list prices.</p>
+        <div class="budget">
+          <label>Tasks per day <input type="number" id="tpd" min="0" step="1" value="10" /></label>
+          <label
+            >Days per month <input type="number" id="dpm" min="0" max="31" step="1" value="30"
+          /></label>
+          <span>→ <span class="k" id="tpm"></span> benchmark tasks / month</span>
+        </div>
+        <div class="tscroll"><table id="rank"></table></div>
+      </details>
+
+      <details class="note">
+        <summary>Method and definitions</summary>
+        <p>
+          <b>Terms.</b> A <b>configuration</b> is a model at one reasoning level.
+          <b>What the numbers mean.</b> Score depends on the Y axis. <b>Opifex Score</b> (default)
+          is our weighted combination of the configured coding benchmarks and the knowledge
+          benchmark, using local weights. It is our calculation, not an index published by
+          Artificial Analysis. The knowledge score is an index, not a pass rate: correct answers
+          add, hallucinated answers subtract, and abstentions are neutral, so it can be negative, as
+          can the Opifex Score. Cost and tokens for this score use the configured coding benchmarks;
+          the knowledge benchmark is a quality signal, not a workload. The <b>Coding bucket</b> is
+          our weighted combination of those coding benchmark scores using the current methodology
+          weights. The component scores and Coding bucket weights come from the source data.
+          <b>Cost and tokens follow the Y axis</b> by default. Each evaluation's per-task cost and
+          output tokens use its current methodology task count. "Full Intelligence Index" uses the
+          evaluations and weights in the current methodology. The index cost is always shown as a
+          reference column. Cost per task is recomputed from per-evaluation token counts: cacheable
+          input × measured cache-hit rate at the cache-read price, remaining input at the
+          cache-write price (or input price when unavailable), and reasoning plus answer tokens at
+          the output price, divided by that evaluation's task count. Output tokens / task are
+          computed the same way using reasoning plus answer tokens. Score per $ and per 100k tokens
+          use the current Y axis and only make sense among models that pass your min score. Elbow by
+          model = within each selected model, configurations sorted by the current X axis;
+          configurations worse and pricier than a cheaper configuration of the same model are greyed
+          out; slope = extra points ÷ log10(x ratio) between consecutive non-dominated
+          configurations (points per 10× more cost or tokens); the elbow is the level just before
+          the largest drop in slope, provided no later step is steeper than the step into it;
+          otherwise there is no real elbow and the top level is marked (needs at least 3
+          non-dominated configurations). Each slope drop carries a standard error propagated from
+          the scores' standard errors. An elbow is proven when its drop exceeds the noise threshold
+          times that error and no other candidate is statistically tied; otherwise the tool shows
+          the elbow region and does not pick. A step between two configurations is a proven gain
+          when the score difference exceeds the noise threshold times the standard error of the
+          difference (solid effort-line segment, green "Gain · σ · cost×"); otherwise it is not
+          proven (dashed, grey). Proven gains: from a model's cheapest frontier configuration, each
+          arrow jumps to the cheapest configuration that is a proven gain over the previous one.
+          Marginal $ / extra pt = for each configuration on the cost Pareto line, (its cost − the
+          previous Pareto configuration's cost) ÷ (its score − that configuration's score): what
+          each extra point on the current Y axis costs when you step up; hover the value to see the
+          step. Monthly cost = cost per task × tasks per day × days per month, at API list prices:
+          an API-equivalent value for comparing models, not what a flat subscription charges; the
+          default 10 tasks/day × 30 days is a round placeholder, not a usage estimate, so set your
+          own volume. Min score is a view filter with no default (0): it is a preference, so the
+          tool shows every configuration until you set one; in relative mode it is a percentage of
+          the current top score among selected models. <b>Noise.</b> Each score's standard error
+          uses the task counts and weights in its scoring metadata. Pass-rate benchmarks use
+          √(p(1−p)/N); the knowledge index, based on +1/−1/0 per question, is bounded by
+          √((1−I²)/N). Composite scores combine component errors using the current weights. These
+          are conservative (unpaired) bounds. "Dominated" = another selected configuration is at
+          most the same on the current X axis and better by more than the noise threshold (1σ or 2σ
+          of the difference). The noise threshold is the only convention in these rules. The default
+          is 2σ, the conventional level for calling a difference proven (about 95%); 1σ is available
+          for an exploratory reading. Quadrant = AA's: the top-left quarter of the plot area, purely
+          geometric. Configurations without a published price, or with a $0 price, are not shown
+          (they cannot be placed on a cost axis). Selection is saved in the URL hash; AA's
+          <code>?models=</code> slugs also work.
+        </p>
+      </details>
+    </div>
+    <script id="chart-data" type="application/json">
+      __DATA__
+    </script>
+    <script>
+      __APP__;
+    </script>
+  </body>
+</html>
