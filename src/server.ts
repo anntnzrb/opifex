@@ -44,7 +44,10 @@ const server = Bun.serve({
   routes: {
     "/": chart,
     "/index.html": chart,
-    "/refresh": { GET: () => new Response(null, { status: 204 }), POST: refresh },
+    "/refresh": {
+      GET: () => new Response(null, { status: 204, headers: { "X-Opifex-Refresh": "1" } }),
+      POST: refresh,
+    },
   },
 });
 console.log(`Opifex: http://localhost:${server.port}`);

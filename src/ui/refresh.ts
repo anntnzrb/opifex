@@ -16,7 +16,8 @@ async function showRefresh(
 ): Promise<void> {
   // Static hosts serve the same page without the refresh endpoint.
   try {
-    if ((await fetch("/refresh")).status !== 204) return;
+    const response = await fetch("refresh");
+    if (response.status !== 204 || response.headers.get("X-Opifex-Refresh") !== "1") return;
   } catch {
     return;
   }
