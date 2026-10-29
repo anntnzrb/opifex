@@ -36,7 +36,7 @@ async function runRefresh(
   button.disabled = true;
   status.textContent = "Refreshing data…";
   try {
-    const response = await fetch("/refresh", { method: "POST" });
+    const response = await fetch("refresh", { method: "POST" });
     if (!response.ok) throw new Error(await response.text());
     const page = new DOMParser().parseFromString(await response.text(), "text/html");
     const raw = page.querySelector("#chart-data")?.textContent;
