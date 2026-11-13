@@ -156,6 +156,15 @@ test("parses all nine task counts and weights from AA methodology", async () => 
   expect(parsed.source.sha256).toBe(Buffer.from(digest).toString("hex"));
 });
 
+test("parses the renamed FrontierCode-AA 2.0 methodology without changing its data", () => {
+  const renamed = methodologyHtml.replace("FrontierCode 2.0", "FrontierCode-AA 2.0");
+  expect(parseMethodology(renamed, fixtureMethodology.source)).toEqual(fixtureMethodology);
+  const unknownVersion = methodologyHtml.replace("FrontierCode 2.0", "FrontierCode-AA 3.0");
+  expect(() => parseMethodology(unknownVersion, fixtureMethodology.source)).toThrow(
+    "missing evaluations",
+  );
+});
+
 test("fails closed when AA methodology rows or weighting drift", () => {
   const missing = methodologyHtml.replace("FrontierCode 2.0", "FrontierCode X");
   expect(() => parseMethodology(missing, fixtureMethodology.source)).toThrow("missing evaluations");

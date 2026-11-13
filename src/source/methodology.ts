@@ -6,16 +6,17 @@ const evaluationNames = {
   briefcase: "AA-Briefcase v1.1",
   automationBench: "AutomationBench-AA",
   gdpPdf: "GDP.pdf",
-  frontierCode20: "FrontierCode 2.0",
+  frontierCode20: "FrontierCode-AA 2.0",
   terminalBench40: "Terminal-Bench 4.0",
   terminalBenchScience: "Terminal-Bench-Science 0.1",
   critptAgenticHard: "CritPt v2 (Hard Subset)",
   omniscience: "AA-Omniscience v1.1",
   hleDiamond: "HLE-Diamond",
 } as const satisfies Record<(typeof evaluationKeys)[number], string>;
-const evaluationByName = new Map<string, (typeof evaluationKeys)[number]>(
-  evaluationKeys.map((key) => [evaluationNames[key], key]),
-);
+const evaluationByName = new Map<string, (typeof evaluationKeys)[number]>([
+  ...evaluationKeys.map((key) => [evaluationNames[key], key] as const),
+  ["FrontierCode 2.0", "frontierCode20"],
+]);
 
 const evaluationValue = Schema.Struct({ taskCount: Schema.Int, indexWeight: Schema.Finite });
 const methodologySchema = Schema.Struct({
