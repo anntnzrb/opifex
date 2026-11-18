@@ -19,6 +19,8 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+    outputs:
+      deploy: ${{ steps.compare.outputs.deploy }}
     steps:
       - uses: actions/checkout@v7
       - uses: oven-sh/setup-bun@v2
@@ -27,15 +29,37 @@ jobs:
       # A failed refresh stops the run and leaves the last deployment online.
       - run: mkdir -p data && cp test/fixtures/aa-snapshot-2026-10-28.json data/
       - run: bun run refresh
-      - run: bun run build
-      - run: mkdir -p site && cp dist/opifex.html site/index.html && cp dist/elbows.md site/elbows.md
-      - uses: actions/configure-pages@v6
-      - uses: actions/upload-pages-artifact@v5
+      - id: pages
+        uses: actions/configure-pages@v6
+      # Scheduled runs deploy only when the AA catalog or methodology changed
+      # since the live deployment. Pushes and manual runs always deploy.
+      - id: compare
+        env:
+          EVENT: ${{ github.event_name }}
+          SITE: ${{ steps.pages.outputs.base_url }}
+        run: |
+          latest=$(ls data/aa-snapshot-*.json | sort | tail -n 1)
+          version=$(jq -r '[.source.manifest_sha256, .methodology.source.sha256] | join(" ")' "$latest")
+          live=$(curl -fsSL "$SITE/version.txt?t=$(date +%s)" || true)
+          if [ "$EVENT" = schedule ] && [ "$live" = "$version" ]; then
+            echo "AA data unchanged; skipping deploy."
+            echo "deploy=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "deploy=true" >> "$GITHUB_OUTPUT"
+          fi
+          mkdir -p site && echo "$version" > site/version.txt
+      - if: steps.compare.outputs.deploy == 'true'
+        run: bun run build
+      - if: steps.compare.outputs.deploy == 'true'
+        run: cp dist/opifex.html site/index.html && cp dist/elbows.md site/elbows.md
+      - if: steps.compare.outputs.deploy == 'true'
+        uses: actions/upload-pages-artifact@v5
         with:
           path: site
 
   deploy:
     needs: build
+    if: needs.build.outputs.deploy == 'true'
     runs-on: ubuntu-latest
     environment:
       name: github-pages
