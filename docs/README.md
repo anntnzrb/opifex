@@ -23,7 +23,7 @@ Type-aware lint remains enabled across the project. UI files have a scoped excep
 
 `.github/workflows/check.yml` runs `bun run check` on pushes to `main` and on pull requests. It builds from the recorded snapshot in `test/fixtures/`, so it does not depend on AA being reachable.
 
-`.github/workflows/pages.yml` publishes the chart to GitHub Pages on pushes to `main`, daily, and on demand. It seeds `data/` with the recorded snapshot as the population baseline, runs `bun run refresh` and `bun run build`, and deploys `dist/opifex.html` as the site index and `dist/elbows.md` at `/elbows.md`. If the refresh fails, the run stops and the previous deployment stays online. The published page hides the **Refresh data** button because the static host has no refresh endpoint. In the repository settings, set **Pages → Source** to **GitHub Actions**.
+`.github/workflows/pages.yml` publishes the chart to GitHub Pages on pushes to `main`, every four hours, and on demand. It seeds `data/` with the recorded snapshot as the population baseline and runs `bun run refresh`. Each deployment includes `version.txt` with the SHA-256 of the AA catalog and methodology; a scheduled run that finds the same hashes on the live site skips the build and deploy. Otherwise it runs `bun run build` and deploys `dist/opifex.html` as the site index and `dist/elbows.md` at `/elbows.md`. If the refresh fails, the run stops and the previous deployment stays online. The published page hides the **Refresh data** button because the static host has no refresh endpoint. In the repository settings, set **Pages → Source** to **GitHub Actions**.
 
 ## License
 
