@@ -1,5 +1,10 @@
 import { Schema } from "effect";
-import { evaluationKeys, validateMethodology, type Methodology } from "./schema.ts";
+import {
+  evaluationKeys,
+  methodologySchema,
+  validateMethodology,
+  type Methodology,
+} from "./schema.ts";
 
 const methodPage = "https://artificialanalysis.ai/methodology/intelligence-benchmarking";
 const evaluationNames = {
@@ -8,6 +13,7 @@ const evaluationNames = {
   gdpPdf: "GDP.pdf",
   frontierCode20: "FrontierCode-AA 2.0",
   terminalBench40: "Terminal-Bench 4.0",
+  terminalBench41: "Terminal-Bench 4.1",
   terminalBenchScience: "Terminal-Bench-Science 0.1",
   critptAgenticHard: "CritPt v2 (Hard Subset)",
   omniscience: "AA-Omniscience v1.1",
@@ -17,22 +23,6 @@ const evaluationByName = new Map<string, (typeof evaluationKeys)[number]>([
   ...evaluationKeys.map((key) => [evaluationNames[key], key] as const),
   ["FrontierCode 2.0", "frontierCode20"],
 ]);
-
-const evaluationValue = Schema.Struct({ taskCount: Schema.Int, indexWeight: Schema.Finite });
-const methodologySchema = Schema.Struct({
-  source: Schema.Struct({ url: Schema.String, fetched_at: Schema.String, sha256: Schema.String }),
-  evaluations: Schema.Struct({
-    briefcase: evaluationValue,
-    automationBench: evaluationValue,
-    gdpPdf: evaluationValue,
-    frontierCode20: evaluationValue,
-    terminalBench40: evaluationValue,
-    terminalBenchScience: evaluationValue,
-    critptAgenticHard: evaluationValue,
-    omniscience: evaluationValue,
-    hleDiamond: evaluationValue,
-  }),
-});
 
 function text(html: string): string {
   return html
@@ -145,10 +135,23 @@ export function parseMethodology(
     found.set(evaluation.key, evaluation.data);
   }
 
-  const missing = evaluationKeys.filter((key) => !found.has(key));
+  const hasTerminalBench40 = found.has("terminalBench40");
+  const hasTerminalBench41 = found.has("terminalBench41");
+  if (hasTerminalBench40 && hasTerminalBench41) {
+    throw new Error("AA methodology contains multiple Terminal-Bench versions");
+  }
+  const missing: string[] = evaluationKeys.filter(
+    (key) => key !== "terminalBench40" && key !== "terminalBench41" && !found.has(key),
+  );
+  if (!hasTerminalBench40 && !hasTerminalBench41) missing.push("terminalBench");
   if (missing.length > 0)
     throw new Error(`AA methodology is missing evaluations: ${missing.join(", ")}`);
-  const evaluations = Object.fromEntries(evaluationKeys.map((key) => [key, found.get(key)]));
+  const evaluations = Object.fromEntries(
+    evaluationKeys.flatMap((key) => {
+      const value = found.get(key);
+      return value === undefined ? [] : [[key, value] as const];
+    }),
+  );
   return validateMethodology(Schema.decodeUnknownSync(methodologySchema)({ source, evaluations }));
 }
 

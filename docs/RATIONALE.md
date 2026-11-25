@@ -4,7 +4,7 @@ Living documentation for a small, self-contained tool that answers one question:
 
 > **Which model, at which reasoning-effort level, gives the best result for coding agents per dollar, and where does more reasoning stop paying off?**
 
-**Terms.** A **model** is, for example, Claude Opus 5.5 or GPT-6.1 Sol. A **configuration** is a model at one reasoning level in one harness. In AA's data the harness is fixed per benchmark (Stirrup for FrontierCode 2.0, mini-swe-agent for Terminal-Bench 4.0), so a configuration is identified by model + reasoning level. Every model and every configuration is treated the same way, with no preference for any provider or company.
+**Terms.** A **model** is, for example, Claude Opus 5.5 or GPT-6.1 Sol. A **configuration** is a model at one reasoning level in one harness. In AA's data the harness is fixed per benchmark (Stirrup for FrontierCode 2.0, mini-swe-agent for Terminal-Bench), so a configuration is identified by model + reasoning level. Every model and every configuration is treated the same way, with no preference for any provider or company.
 
 This file describes the tool, the method and the current conclusions as they stand today. It is not a changelog or an activity log. When the method, the data or a conclusion changes, edit the relevant section so that this file stays true. A new session should be able to read this file and continue without any other context.
 
@@ -53,10 +53,12 @@ Benchmark data comes from **Artificial Analysis (AA)**; Opifex Score weights are
 
 | Piece | Source of truth |
 | --- | --- |
-| Per-benchmark scores (`frontierCode20`, `terminalBench40`, `omniscience`, …), per-eval token counts, list prices, cache-hit price, measured cache-hit rate, output speed | The model catalog behind `https://artificialanalysis.ai/evaluations/frontiercode-2-0`. The page embeds the public encrypted catalog manifest, which `refresh` decodes [1] |
+| Per-benchmark scores (`frontierCode20`, `terminalBench40` / `terminalBench41`, `omniscience`, …), per-eval token counts, list prices, cache-hit price, measured cache-hit rate, output speed | The model catalog behind `https://artificialanalysis.ai/evaluations/frontiercode-2-0`. The page embeds the public encrypted catalog manifest, which `refresh` decodes [1] |
 | Benchmark weights and task counts | AA methodology table [2], captured in each snapshot |
 | Opifex Score weights | `config/rules.json` |
 | Cost-per-task formula | AA's frontend JavaScript, read from the bundles served with the evaluation page and replicated here (see [Cost and tokens](#5-cost-and-tokens)) |
+
+AA replaced Terminal-Bench 4.0 with Terminal-Bench 4.1 in Intelligence Index v5.0.2. Opifex treats Terminal-Bench as a versioned score slot: each snapshot records the versioned methodology row and catalog fields it uses, recorded 4.0 snapshots remain readable, and current refreshes use 4.1. Unknown future versions fail closed rather than reusing old task counts or weights.
 
 Not used, and why:
 
@@ -70,10 +72,10 @@ The Y axis offers four scores. All of them are computed from AA's published per-
 
 | Score | Formula | Notes |
 | --- | --- | --- |
-| **Opifex Score** (default) | 0.6 × FrontierCode 2.0 + 0.2 × Terminal-Bench 4.0 + 0.2 × AA-Omniscience | Our calculation, not an AA index |
-| Coding bucket | 0.6 × FrontierCode 2.0 + 0.4 × Terminal-Bench 4.0 | AA's v5 Coding bucket |
+| **Opifex Score** (default) | 0.6 × FrontierCode 2.0 + 0.2 × Terminal-Bench + 0.2 × AA-Omniscience | Our calculation, not an AA index |
+| Coding bucket | 0.6 × FrontierCode 2.0 + 0.4 × Terminal-Bench | AA's v5 Coding bucket |
 | FrontierCode 2.0 | as published | Merge-quality changes to real open-source repositories, 132 tasks, AA's Stirrup harness [2] |
-| Terminal-Bench 4.0 | as published | 66 agentic terminal tasks, mini-swe-agent harness [2] |
+| Terminal-Bench | as published | 66 agentic terminal tasks, mini-swe-agent harness; 4.0 in recorded snapshots, 4.1 in current refreshes [2] |
 
 **Where the weights come from.** The Opifex Score uses local 60 / 20 / 20 weights: FrontierCode receives the greatest share because repository changes are central to the intended workload, while Terminal-Bench and Omniscience remain complementary signals. These are a workload preference, not weights validated by AA or a proven predictor of real-world outcomes. The Coding bucket retains AA v5's 15 / 10 Coding category weights, normalized to 60 / 40. AA's index integrates Omniscience through accuracy and non-hallucination components; it does not directly weight the displayed Omniscience index as this score does [2][3].
 
@@ -82,7 +84,7 @@ The Y axis offers four scores. All of them are computed from AA's published per-
 **What each component measures for a coding agent:**
 
 - **FrontierCode 2.0:** can it write a change that a maintainer would merge?
-- **Terminal-Bench 4.0:** can it operate a terminal and an environment through multi-step tasks?
+- **Terminal-Bench:** can it operate a terminal and an environment through multi-step tasks?
 - **AA-Omniscience:** does it know things, and does it avoid inventing them (APIs, flags, library versions)? It is an index, not a pass rate: correct answers add points, wrong answers subtract them and abstentions are neutral, so it can be negative (as low as −71 in the current data). As a result, the Opifex Score can also be negative.
 
 **Why these three and not more.** A benchmark belongs in the score only if it measures something a coding agent needs that the others do not already capture. The rest of the index fails that test: TB-Science is long-horizon work but in scientific domains, HLE-Diamond and CritPt are academic reasoning, and Briefcase, GDP.pdf and GDPval are office and document work. AutomationBench (tool and API workflows) is the closest candidate, but it overlaps heavily with Terminal-Bench.
@@ -118,7 +120,7 @@ If `cacheableInput` is absent, all input is priced at the input price. If `cache
 | Opifex Score | Coding-bucket tasks: 0.6 × FrontierCode cost + 0.4 × Terminal-Bench cost |
 | Coding bucket | same |
 | FrontierCode 2.0 | FrontierCode tasks |
-| Terminal-Bench 4.0 | Terminal-Bench tasks |
+| Terminal-Bench | Terminal-Bench tasks |
 
 **Omniscience is scored but not costed.** It consists of 3,000 short factual questions, so its per-task cost is tiny. Including it in the cost would make every model look far cheaper than it is for agentic work. Treat it as a quality attribute, not as a workload.
 
@@ -133,7 +135,7 @@ A score is an average over a finite set of tasks, so it carries sampling noise. 
 | Score | Standard error | Basis |
 | --- | --- | --- |
 | FrontierCode 2.0 | √(p(1−p)/132) | Pass-rate approximation over 132 tasks. FrontierCode gives partial credit, which usually lowers the variance, so this is an upper bound |
-| Terminal-Bench 4.0 | √(p(1−p)/66) | Pass rate over 66 tasks |
+| Terminal-Bench | √(p(1−p)/66) | Pass rate over 66 tasks |
 | AA-Omniscience | √((1−I²)/3000), with I on a −1…1 scale | Each of 3,000 questions scores +1 (correct), −1 (incorrect) or 0 (abstain), so the per-question variance is at most 1 − I² |
 | Coding bucket | √((0.6 σ_FC)² + (0.4 σ_TB)²) | Weighted combination, components assumed independent |
 | Opifex Score | √((0.6 σ_FC)² + (0.2 σ_TB)² + (0.2 σ_Om)²) | Same |
@@ -215,7 +217,7 @@ A model needs at least 3 non-dominated configurations for an elbow to exist.
 - Up is better, left is cheaper.
 - On a log X axis, a short horizontal hop can mean 2–3× more cost. Read the slope of the lines, not the visual distance.
 - To see where more reasoning stops paying off within a model, use the **Elbow by model** panel: a steep step gains many points per unit of cost, a flat step gains few. A **proven** elbow is a level the data singles out; an **elbow region** means the data cannot separate those levels.
-- Switch the Y axis to FrontierCode 2.0 and then to Terminal-Bench 4.0 to see which component drives a step. For example, GPT-6.1 Terra's step from medium to high is about 68% Terminal-Bench gain.
+- Switch the Y axis to FrontierCode 2.0 and then to Terminal-Bench to see which component drives a step. For example, GPT-6.1 Terra's step from medium to high is about 68% Terminal-Bench gain.
 - Never decide on a single benchmark. If a smaller model ties on one benchmark and loses by 20 points on the others, the tie is the anomaly.
 
 ## 11. Results by model

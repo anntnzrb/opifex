@@ -8,10 +8,10 @@ const rulesSchema = Schema.Struct({
   scores: Schema.Struct({
     das: Schema.Tuple([
       Schema.Literal("frontierCode20"),
-      Schema.Literal("terminalBench40"),
+      Schema.Literal("terminalBench"),
       Schema.Literal("omniscience"),
     ]),
-    coding: Schema.Tuple([Schema.Literal("frontierCode20"), Schema.Literal("terminalBench40")]),
+    coding: Schema.Tuple([Schema.Literal("frontierCode20"), Schema.Literal("terminalBench")]),
   }),
 });
 export function parseRules(input: unknown) {

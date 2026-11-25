@@ -16,6 +16,7 @@ const row = Schema.Struct({
   releaseDate: Schema.NullOr(Schema.String),
   frontierCode20: Schema.Finite,
   terminalBench40: nullableNumber,
+  terminalBench41: Schema.optionalKey(nullableNumber),
   omniscience: nullableNumber,
   price1mInputTokens: nullableNumber,
   price1mOutputTokens: nullableNumber,
@@ -32,19 +33,21 @@ export const evaluationKeys = [
   "gdpPdf",
   "frontierCode20",
   "terminalBench40",
+  "terminalBench41",
   "terminalBenchScience",
   "critptAgenticHard",
   "omniscience",
   "hleDiamond",
 ] as const;
-const methodology = Schema.Struct({
+export const methodologySchema = Schema.Struct({
   source: Schema.Struct({ url: Schema.String, fetched_at: Schema.String, sha256: Schema.String }),
   evaluations: Schema.Struct({
     briefcase: methodologyEvaluation,
     automationBench: methodologyEvaluation,
     gdpPdf: methodologyEvaluation,
     frontierCode20: methodologyEvaluation,
-    terminalBench40: methodologyEvaluation,
+    terminalBench40: Schema.optionalKey(methodologyEvaluation),
+    terminalBench41: Schema.optionalKey(methodologyEvaluation),
     terminalBenchScience: methodologyEvaluation,
     critptAgenticHard: methodologyEvaluation,
     omniscience: methodologyEvaluation,
@@ -57,12 +60,21 @@ export const snapshotSchema = Schema.Struct({
     fetched_at: Schema.String,
     manifest_sha256: Schema.String,
   }),
-  methodology,
+  methodology: methodologySchema,
   rows: Schema.Array(row),
 });
 export type Snapshot = typeof snapshotSchema.Type;
 export type Row = typeof row.Type;
-export type Methodology = typeof methodology.Type;
+export type Methodology = typeof methodologySchema.Type;
+
+export function activeTerminalBenchKey(evaluations: Methodology["evaluations"]) {
+  const hasTerminalBench40 = evaluations.terminalBench40 !== undefined;
+  const hasTerminalBench41 = evaluations.terminalBench41 !== undefined;
+  if (hasTerminalBench40 === hasTerminalBench41) {
+    throw new Error("Methodology must contain exactly one Terminal-Bench evaluation");
+  }
+  return hasTerminalBench41 ? "terminalBench41" : "terminalBench40";
+}
 
 export function validateSnapshot(snapshot: Snapshot): Snapshot {
   if (snapshot.rows.length === 0) throw new Error("Snapshot has no scored rows");
@@ -72,11 +84,11 @@ export function validateSnapshot(snapshot: Snapshot): Snapshot {
     if (!model.slug || ids.has(model.slug))
       throw new Error(`Invalid or duplicate model slug: ${model.slug}`);
     ids.add(model.slug);
+    const terminalScores = [model.terminalBench40, model.terminalBench41 ?? null];
     if (
       model.frontierCode20 < 0 ||
       model.frontierCode20 > 1 ||
-      (model.terminalBench40 !== null &&
-        (model.terminalBench40 < 0 || model.terminalBench40 > 1)) ||
+      terminalScores.some((score) => score !== null && (score < 0 || score > 1)) ||
       (model.omniscience !== null && Math.abs(model.omniscience) > 100)
     )
       throw new Error(`Invalid benchmark score: ${model.slug}`);
@@ -103,11 +115,27 @@ export function validateSnapshot(snapshot: Snapshot): Snapshot {
         throw new Error(`Invalid token counts: ${model.slug}`);
     }
   }
+  const terminalBenchKey = activeTerminalBenchKey(snapshot.methodology.evaluations);
+  if (!snapshot.rows.some((model) => (model[terminalBenchKey] ?? null) !== null)) {
+    throw new Error("Catalog has no scores for the active Terminal-Bench evaluation");
+  }
+  if (!snapshot.rows.some((model) => model.canonicalEvalTokenCounts[terminalBenchKey])) {
+    throw new Error("Catalog has no token counts for the active Terminal-Bench evaluation");
+  }
   return snapshot;
 }
 
 export function validateMethodology(value: Methodology): Methodology {
-  const evaluations = Object.values(value.evaluations);
+  const terminalBenchCount = [
+    value.evaluations.terminalBench40,
+    value.evaluations.terminalBench41,
+  ].filter((evaluation) => evaluation !== undefined).length;
+  if (terminalBenchCount !== 1) {
+    throw new Error("Methodology must contain exactly one Terminal-Bench evaluation");
+  }
+  const evaluations = Object.values(value.evaluations).filter(
+    (evaluation) => evaluation !== undefined,
+  );
   if (evaluations.some((evaluation) => evaluation.taskCount <= 0 || evaluation.indexWeight < 0)) {
     throw new Error("Methodology task counts must be positive and weights must be nonnegative");
   }

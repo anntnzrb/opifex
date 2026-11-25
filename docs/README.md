@@ -15,7 +15,7 @@ Snapshots are not tracked in git: every checkout or deployment runs `bun run ref
 
 The chart and build share the scoring and elbow calculations in `src/core/`. The snapshot records the AA methodology and its source; local conventions are in `config/rules.json`.
 
-The methodology parser recognizes both the current `FrontierCode-AA 2.0` name and the `FrontierCode 2.0` name in recorded snapshots. Both map to `frontierCode20`; unknown benchmark versions still stop refresh rather than reusing old task counts or weights.
+The methodology parser recognizes both the current `FrontierCode-AA 2.0` name and the `FrontierCode 2.0` name in recorded snapshots. Both map to `frontierCode20`; unknown benchmark versions still stop refresh rather than reusing old task counts or weights. Terminal-Bench is versioned upstream: snapshots built from `Terminal-Bench 4.0` remain readable, current `Terminal-Bench 4.1` snapshots use `terminalBench41`, and local rules refer to the version-independent `terminalBench` score slot.
 
 Type-aware lint remains enabled across the project. UI files have a scoped exception for `prefer-readonly-parameter-types` because the DOM and interactive state are intentionally mutable; their size limits are 400 lines per file and 80 lines per function.
 

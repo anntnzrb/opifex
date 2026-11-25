@@ -18,6 +18,39 @@ test("published snapshot yields the expected Opus cost and output tokens", async
   expect(opus?.scoring.sampleCounts).toEqual({ fc: 132, tb: 66, om: 3000 });
 });
 
+test("uses Terminal-Bench 4.1 when the methodology selects it", async () => {
+  const snapshot = Schema.decodeUnknownSync(snapshotSchema)(
+    await Bun.file("test/fixtures/aa-snapshot-2026-10-28.json").json(),
+  );
+  const first = snapshot.rows[0];
+  const terminalBench40 = snapshot.methodology.evaluations.terminalBench40;
+  if (!first || !terminalBench40) throw new Error("Snapshot fixture is empty");
+  const evaluations = {
+    ...snapshot.methodology.evaluations,
+    terminalBench41: terminalBench40,
+  };
+  delete evaluations.terminalBench40;
+  const point = points({
+    ...snapshot,
+    methodology: { ...snapshot.methodology, evaluations },
+    rows: [
+      {
+        ...first,
+        terminalBench40: 0.1,
+        terminalBench41: 0.6,
+        canonicalEvalTokenCounts: {
+          ...first.canonicalEvalTokenCounts,
+          terminalBench41: { input: 66, answer: 66, reasoning: 0, cacheableInput: null },
+        },
+      },
+    ],
+  })[0];
+  expect(point?.tb).toBeCloseTo(60, 10);
+  expect(point?.m.tb?.ot).toBeCloseTo(1, 10);
+  expect(point?.m.coding).not.toBeNull();
+  expect(point?.scoring.sampleCounts.tb).toBe(66);
+});
+
 test("all model elbow results match the reviewed baseline", async () => {
   const { elbowTable } = await import("../src/core/table.ts");
   const snapshot = Schema.decodeUnknownSync(snapshotSchema)(

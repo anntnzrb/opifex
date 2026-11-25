@@ -3,7 +3,7 @@
   "minimumScoredPopulationRatio": 0.5,
   "dasWeights": [0.6, 0.2, 0.2],
   "scores": {
-    "das": ["frontierCode20", "terminalBench40", "omniscience"],
-    "coding": ["frontierCode20", "terminalBench40"]
+    "das": ["frontierCode20", "terminalBench", "omniscience"],
+    "coding": ["frontierCode20", "terminalBench"]
   }
 }

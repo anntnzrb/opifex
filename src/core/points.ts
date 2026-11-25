@@ -1,8 +1,9 @@
 import type { Row, Snapshot } from "../source/schema.ts";
-import { evaluationKeys } from "../source/schema.ts";
+import { activeTerminalBenchKey, evaluationKeys } from "../source/schema.ts";
 import { rules } from "./rules.ts";
 
 type Evaluation = (typeof evaluationKeys)[number];
+type Evaluations = Snapshot["methodology"]["evaluations"];
 interface Metrics {
   readonly cb: readonly [number, number, number];
   readonly ot: number;
@@ -44,29 +45,44 @@ function combine(parts: readonly (readonly [number, Metrics | null])[]): Metrics
   };
 }
 
+function terminalBenchEvaluation(evaluations: Evaluations) {
+  const key = activeTerminalBenchKey(evaluations);
+  const data = evaluations[key];
+  if (data === undefined) throw new Error("Snapshot methodology has no Terminal-Bench evaluation");
+  return { key, data } as const;
+}
+
+function resolveEvaluation(evaluations: Evaluations, key: "frontierCode20" | "terminalBench") {
+  if (key === "terminalBench") return terminalBenchEvaluation(evaluations);
+  return { key, data: evaluations.frontierCode20 } as const;
+}
+
 function metricsFor(row: Row, methodology: Snapshot["methodology"]) {
   const evaluations = methodology.evaluations;
+  const terminalBench = terminalBenchEvaluation(evaluations);
   const fc = perTask(row, "frontierCode20", evaluations.frontierCode20.taskCount);
-  const tb = perTask(row, "terminalBench40", evaluations.terminalBench40.taskCount);
-  const index = evaluationKeys.map(
-    (key) => [evaluations[key].indexWeight, perTask(row, key, evaluations[key].taskCount)] as const,
-  );
+  const tb = perTask(row, terminalBench.key, terminalBench.data.taskCount);
+  const index = evaluationKeys.flatMap((key) => {
+    const evaluation = evaluations[key];
+    return evaluation === undefined
+      ? []
+      : [[evaluation.indexWeight, perTask(row, key, evaluation.taskCount)] as const];
+  });
+  const firstCoding = resolveEvaluation(evaluations, rules.scores.coding[0]);
+  const secondCoding = resolveEvaluation(evaluations, rules.scores.coding[1]);
   const codingWeights = normalizedWeights2(
-    evaluations[rules.scores.coding[0]].indexWeight,
-    evaluations[rules.scores.coding[1]].indexWeight,
+    firstCoding.data.indexWeight,
+    secondCoding.data.indexWeight,
   );
   return {
     metrics: {
       fc: combine([[1, fc]]),
       tb: combine([[1, tb]]),
       coding: combine([
+        [firstCoding.data.indexWeight, perTask(row, firstCoding.key, firstCoding.data.taskCount)],
         [
-          evaluations[rules.scores.coding[0]].indexWeight,
-          perTask(row, rules.scores.coding[0], evaluations[rules.scores.coding[0]].taskCount),
-        ],
-        [
-          evaluations[rules.scores.coding[1]].indexWeight,
-          perTask(row, rules.scores.coding[1], evaluations[rules.scores.coding[1]].taskCount),
+          secondCoding.data.indexWeight,
+          perTask(row, secondCoding.key, secondCoding.data.taskCount),
         ],
       ]),
       idx: combine(index),
@@ -75,15 +91,17 @@ function metricsFor(row: Row, methodology: Snapshot["methodology"]) {
       weights: { das: rules.dasWeights, coding: codingWeights },
       sampleCounts: {
         fc: evaluations.frontierCode20.taskCount,
-        tb: evaluations.terminalBench40.taskCount,
+        tb: terminalBench.data.taskCount,
         om: evaluations.omniscience.taskCount,
       },
     },
+    terminalBenchKey: terminalBench.key,
   } as const;
 }
 
 function createPoint(row: Row, methodology: Snapshot["methodology"]) {
-  const { metrics, scoring } = metricsFor(row, methodology);
+  const { metrics, scoring, terminalBenchKey } = metricsFor(row, methodology);
+  const terminalBenchScore = row[terminalBenchKey] ?? null;
   if (!metrics.fc || metrics.fc.cb.reduce((a, b) => a + b, 0) <= 0) return null;
   const effort = /\(([^)]*)\)\s*$/u.exec(row.shortName)?.[1]?.replace(" with fallback", "") ?? "";
   const allowed = ["non-reasoning", "low", "medium", "high", "xhigh", "max"];
@@ -97,7 +115,7 @@ function createPoint(row: Row, methodology: Snapshot["methodology"]) {
     o: row.isOpenWeights,
     rd: row.releaseDate,
     fc: row.frontierCode20 * 100,
-    tb: row.terminalBench40 === null ? null : row.terminalBench40 * 100,
+    tb: terminalBenchScore === null ? null : terminalBenchScore * 100,
     om: row.omniscience,
     scoring,
     sp:

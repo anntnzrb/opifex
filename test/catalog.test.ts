@@ -1,7 +1,7 @@
 import { expect, test } from "bun:test";
 import { manifestFromPage, makeSnapshot } from "../src/source/catalog.ts";
 import { parseMethodology, methodologySourceUrl } from "../src/source/methodology.ts";
-import { validateMethodology } from "../src/source/schema.ts";
+import { validateMethodology, validateSnapshot } from "../src/source/schema.ts";
 
 const methodologyHtml = await Bun.file("test/fixtures/aa-methodology-table.html").text();
 const fixtureMethodology = parseMethodology(methodologyHtml, {
@@ -38,7 +38,7 @@ test("rejects a catalog with a malformed scored model", () => {
 
 test("rejects duplicate models and invalid benchmark scores", async () => {
   const { Schema } = await import("effect");
-  const { snapshotSchema, validateSnapshot } = await import("../src/source/schema.ts");
+  const { snapshotSchema } = await import("../src/source/schema.ts");
   const snapshot = Schema.decodeUnknownSync(snapshotSchema)(
     await Bun.file("test/fixtures/aa-snapshot-2026-10-28.json").json(),
   );
@@ -84,7 +84,7 @@ test("ignores unknown catalog metrics while validating metrics used by the chart
     isOpenWeights: false,
     releaseDate: null,
     frontierCode20: 0.5,
-    terminalBench40: null,
+    terminalBench40: 0.4,
     omniscience: null,
     price1mInputTokens: 1,
     price1mOutputTokens: 1,
@@ -94,6 +94,7 @@ test("ignores unknown catalog metrics while validating metrics used by the chart
     medianCanonicalAnswerOutputSpeed: null,
     canonicalEvalTokenCounts: {
       frontierCode20: { input: 100, answer: 20, reasoning: 10, cacheableInput: 0 },
+      terminalBench40: { input: 66, answer: 66, reasoning: 0, cacheableInput: null },
       newlyAddedEvaluation: { upstreamChangedShape: true },
     },
   };
@@ -103,6 +104,7 @@ test("ignores unknown catalog metrics while validating metrics used by the chart
       ?.canonicalEvalTokenCounts,
   ).toEqual({
     frontierCode20: { input: 100, answer: 20, reasoning: 10, cacheableInput: 0 },
+    terminalBench40: { input: 66, answer: 66, reasoning: 0, cacheableInput: null },
   });
   expect(() =>
     makeSnapshot(
@@ -162,6 +164,89 @@ test("parses the renamed FrontierCode-AA 2.0 methodology without changing its da
   const unknownVersion = methodologyHtml.replace("FrontierCode 2.0", "FrontierCode-AA 3.0");
   expect(() => parseMethodology(unknownVersion, fixtureMethodology.source)).toThrow(
     "missing evaluations",
+  );
+});
+
+test("parses Terminal-Bench 4.1 as the current terminal benchmark", () => {
+  const updated = methodologyHtml.replace("Terminal-Bench 4.0", "Terminal-Bench 4.1");
+  const parsed = parseMethodology(updated, fixtureMethodology.source);
+  expect(parsed.evaluations).toMatchObject({
+    terminalBench41: { taskCount: 66, indexWeight: 10 },
+  });
+  expect(parsed.evaluations).not.toHaveProperty("terminalBench40");
+  expect(Object.keys(parsed.evaluations)).toHaveLength(9);
+  const unknownVersion = updated.replace("Terminal-Bench 4.1", "Terminal-Bench 4.2");
+  expect(() => parseMethodology(unknownVersion, fixtureMethodology.source)).toThrow(
+    "missing evaluations",
+  );
+});
+
+test("captures Terminal-Bench 4.1 catalog values", () => {
+  const updated = methodologyHtml.replace("Terminal-Bench 4.0", "Terminal-Bench 4.1");
+  const methodology = parseMethodology(updated, fixtureMethodology.source);
+  const validRow = {
+    slug: "model",
+    shortName: "Model",
+    release: { name: "Model", slug: "model" },
+    creator: { name: "Test", color: "#000" },
+    isOpenWeights: false,
+    releaseDate: null,
+    frontierCode20: 0.5,
+    terminalBench40: 0.4,
+    terminalBench41: 0.6,
+    omniscience: null,
+    price1mInputTokens: 1,
+    price1mOutputTokens: 1,
+    cacheHitPrice: null,
+    cacheWritePrice: null,
+    cacheHitRate: null,
+    medianCanonicalAnswerOutputSpeed: null,
+    canonicalEvalTokenCounts: {
+      frontierCode20: { input: 100, answer: 20, reasoning: 10, cacheableInput: 0 },
+      terminalBench41: { input: 66, answer: 66, reasoning: 0, cacheableInput: null },
+    },
+  };
+  const snapshot = makeSnapshot(
+    { models: [validRow] },
+    { url: "https://example.com", fetched_at: "2026-01-01", manifest_sha256: "x" },
+    methodology,
+  );
+  expect(snapshot.rows[0]).toMatchObject({ terminalBench40: 0.4, terminalBench41: 0.6 });
+  expect(snapshot.rows[0]?.canonicalEvalTokenCounts["terminalBench41"]).toEqual({
+    input: 66,
+    answer: 66,
+    reasoning: 0,
+    cacheableInput: null,
+  });
+});
+
+test("rejects a catalog with no data for the active Terminal-Bench version", async () => {
+  const { Schema } = await import("effect");
+  const { snapshotSchema } = await import("../src/source/schema.ts");
+  const snapshot = Schema.decodeUnknownSync(snapshotSchema)(
+    await Bun.file("test/fixtures/aa-snapshot-2026-10-28.json").json(),
+  );
+  const terminalBench40 = snapshot.methodology.evaluations.terminalBench40;
+  if (!terminalBench40) throw new Error("Snapshot fixture has no Terminal-Bench methodology");
+  const evaluations = {
+    ...snapshot.methodology.evaluations,
+    terminalBench41: terminalBench40,
+  };
+  delete evaluations.terminalBench40;
+  const methodology = { ...snapshot.methodology, evaluations };
+  const withoutScoresOrCounts = snapshot.rows.map((row) => ({
+    ...row,
+    terminalBench41: null,
+  }));
+  expect(() => validateSnapshot({ ...snapshot, methodology, rows: withoutScoresOrCounts })).toThrow(
+    "no scores for the active Terminal-Bench evaluation",
+  );
+  const withoutCounts = snapshot.rows.map((row) => ({
+    ...row,
+    terminalBench41: 0.5,
+  }));
+  expect(() => validateSnapshot({ ...snapshot, methodology, rows: withoutCounts })).toThrow(
+    "no token counts for the active Terminal-Bench evaluation",
   );
 });
 
